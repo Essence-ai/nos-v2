@@ -224,13 +224,38 @@ install_single_gpu_scripts() {
 setup_archiso_profile() {
     log_info "Setting up Archiso profile for NeuronOS..."
 
-    # Copy the releng profile as a base
-    cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/"* "$SCRIPT_DIR/neuronos-iso/"
+    # Backup our custom files
+    cp "$SCRIPT_DIR/neuronos-iso/packages.x86_64" /tmp/neuronos-packages.x86_64.bak
+    cp "$SCRIPT_DIR/neuronos-iso/profiledef.sh" /tmp/neuronos-profiledef.sh.bak
 
-    # Our packages.x86_64 already has the merged list, no need to copy
+    # Copy the releng profile directories we need (syslinux, efiboot, grub, airootfs)
+    log_info "Copying boot directories from upstream archiso..."
+    cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/syslinux" "$SCRIPT_DIR/neuronos-iso/"
+    cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/efiboot" "$SCRIPT_DIR/neuronos-iso/"
+    cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/grub" "$SCRIPT_DIR/neuronos-iso/"
 
-    # Copy NeuronOS airootfs customizations
-    # These overlay on top of the releng airootfs
+    # Copy airootfs base and merge with our customizations
+    log_info "Setting up airootfs..."
+    cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/airootfs/"* "$SCRIPT_DIR/neuronos-iso/airootfs/" 2>/dev/null || true
+
+    # Copy bootstrap_packages if it exists
+    if [ -f "$SCRIPT_DIR/upstream-archiso/configs/releng/bootstrap_packages" ]; then
+        cp "$SCRIPT_DIR/upstream-archiso/configs/releng/bootstrap_packages" "$SCRIPT_DIR/neuronos-iso/"
+    fi
+
+    # Restore our custom files
+    cp /tmp/neuronos-packages.x86_64.bak "$SCRIPT_DIR/neuronos-iso/packages.x86_64"
+    cp /tmp/neuronos-profiledef.sh.bak "$SCRIPT_DIR/neuronos-iso/profiledef.sh"
+
+    # Update syslinux config to say NeuronOS instead of Arch Linux
+    if [ -f "$SCRIPT_DIR/neuronos-iso/syslinux/archiso_sys-linux.cfg" ]; then
+        sed -i 's/Arch Linux/NeuronOS/g' "$SCRIPT_DIR/neuronos-iso/syslinux/"*.cfg
+    fi
+
+    # Update GRUB config to say NeuronOS
+    if [ -f "$SCRIPT_DIR/neuronos-iso/grub/grub.cfg" ]; then
+        sed -i 's/Arch Linux/NeuronOS/g' "$SCRIPT_DIR/neuronos-iso/grub/grub.cfg"
+    fi
 
     log_success "Archiso profile setup complete"
 }
@@ -240,6 +265,18 @@ setup_archiso_profile() {
 # ============================================================
 build_iso() {
     log_info "Building NeuronOS ISO..."
+
+    # Check if syslinux directory exists (profile setup check)
+    if [ ! -d "$SCRIPT_DIR/neuronos-iso/syslinux" ]; then
+        log_warning "Archiso profile not fully set up. Running setup_archiso_profile first..."
+        setup_archiso_profile
+    fi
+
+    # Clean previous build artifacts
+    if [ -d "$BUILD_DIR/iso-work" ]; then
+        log_info "Cleaning previous build directory..."
+        sudo rm -rf "$BUILD_DIR/iso-work"
+    fi
 
     mkdir -p "$BUILD_DIR/iso-work"
     mkdir -p "$BUILD_DIR/iso-output"
