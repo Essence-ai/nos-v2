@@ -1,0 +1,28 @@
+﻿#pragma once
+
+#include <windows.h>
+#include <shellapi.h>
+
+class CWindow {
+  static LRESULT CALLBACK wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+protected:
+  virtual LRESULT onCreate();
+  virtual LRESULT onClose();
+  virtual LRESULT onDestroy();
+  virtual LRESULT onFinal();
+
+  static HINSTANCE hInstance;
+  static void populateWindowClass(WNDCLASSEX &wx);
+
+  virtual LRESULT handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+  HWND m_hwnd = NULL;
+
+public:
+  virtual ~CWindow();
+  void destroy();
+
+  HWND hwnd() { return m_hwnd; }
+  operator HWND() { return m_hwnd; }
+};

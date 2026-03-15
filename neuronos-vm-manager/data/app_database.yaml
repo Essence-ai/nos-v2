@@ -1,0 +1,313 @@
+# NeuronOS Application Routing Database
+# Execution paths: native | wine | proton | vm
+# Priority: native > wine/proton > vm (always prefer least overhead)
+
+applications:
+  # ============================================================
+  # NATIVE LINUX APPLICATIONS
+  # Always prefer these when available
+  # ============================================================
+
+  # Office
+  - name: "LibreOffice"
+    package: "libreoffice-fresh"
+    path: native
+    category: "Office"
+    aliases: ["word processor", "spreadsheet", "office suite", "libre office"]
+
+  - name: "OnlyOffice"
+    package: "onlyoffice-bin"
+    path: native
+    category: "Office"
+    aliases: ["office suite"]
+
+  # Image Editing
+  - name: "GIMP"
+    package: "gimp"
+    path: native
+    category: "Image Editing"
+    aliases: ["photo editor", "image editor", "gnu image manipulation"]
+
+  - name: "Krita"
+    package: "krita"
+    path: native
+    category: "Image Editing"
+    aliases: ["digital painting", "illustration"]
+
+  - name: "Inkscape"
+    package: "inkscape"
+    path: native
+    category: "Vector Graphics"
+    aliases: ["svg editor", "vector illustration"]
+
+  # Video Editing
+  - name: "DaVinci Resolve"
+    package: "davinci-resolve"
+    path: native
+    category: "Video Editing"
+    aliases: ["color grading", "video editor"]
+
+  - name: "Kdenlive"
+    package: "kdenlive"
+    path: native
+    category: "Video Editing"
+    aliases: ["video editor", "kde video"]
+
+  - name: "Shotcut"
+    package: "shotcut"
+    path: native
+    category: "Video Editing"
+
+  # Audio Production
+  - name: "Ardour"
+    package: "ardour"
+    path: native
+    category: "Audio Production"
+    aliases: ["daw", "digital audio workstation"]
+
+  - name: "Audacity"
+    package: "audacity"
+    path: native
+    category: "Audio Editing"
+    aliases: ["audio editor", "sound editor"]
+
+  - name: "LMMS"
+    package: "lmms"
+    path: native
+    category: "Audio Production"
+    aliases: ["music production", "beat maker"]
+
+  # 3D Modeling
+  - name: "Blender"
+    package: "blender"
+    path: native
+    category: "3D Modeling"
+    aliases: ["3d animation", "3d rendering", "cgi"]
+
+  - name: "FreeCAD"
+    package: "freecad"
+    path: native
+    category: "CAD"
+    aliases: ["cad", "parametric modeling"]
+
+  # Development
+  - name: "Visual Studio Code"
+    package: "code"
+    path: native
+    category: "Development"
+    aliases: ["vscode", "code editor", "ide"]
+
+  - name: "JetBrains IDEs"
+    package: "jetbrains-toolbox"
+    path: native
+    category: "Development"
+    aliases: ["intellij", "pycharm", "webstorm", "clion"]
+
+  # Gaming
+  - name: "Steam"
+    package: "steam"
+    path: native
+    category: "Gaming"
+    aliases: ["game launcher", "steam deck"]
+
+  # ============================================================
+  # WINE/PROTON APPLICATIONS
+  # Good compatibility, no VM overhead
+  # ============================================================
+
+  - name: "Microsoft Office 365"
+    path: wine
+    wine_prefix: "office365"
+    wine_version: "wine-staging"
+    category: "Office"
+    exe_patterns: ["*Office*Setup*.exe", "*OfficeSetup*.exe"]
+    notes: "Installs via official installer. Some features may be limited."
+
+  - name: "Notepad++"
+    path: wine
+    category: "Text Editor"
+    exe_patterns: ["npp.*.Installer*.exe", "notepad++*.exe"]
+
+  # Games (via Proton/Steam)
+  - name: "Steam Games (via Proton)"
+    path: proton
+    category: "Gaming"
+    notes: "Managed by Steam + Proton. Most games work automatically."
+
+  # ============================================================
+  # VM-REQUIRED APPLICATIONS
+  # Need full Windows GPU acceleration
+  # ============================================================
+
+  # Adobe Creative Suite
+  - name: "Adobe Photoshop"
+    path: vm
+    category: "Image Editing"
+    exe_patterns:
+      - "*Photoshop*Setup*.exe"
+      - "*photoshop*.exe"
+      - "Set-up.exe"
+    notes: "Requires GPU passthrough for acceptable performance."
+
+  - name: "Adobe Premiere Pro"
+    path: vm
+    category: "Video Editing"
+    exe_patterns:
+      - "*Premiere*Setup*.exe"
+      - "*premiere*.exe"
+      - "Set-up.exe"
+
+  - name: "Adobe After Effects"
+    path: vm
+    category: "Motion Graphics"
+    exe_patterns:
+      - "*After*Effects*Setup*.exe"
+      - "*aftereffects*.exe"
+
+  - name: "Adobe Illustrator"
+    path: vm
+    category: "Vector Graphics"
+    exe_patterns:
+      - "*Illustrator*Setup*.exe"
+      - "*illustrator*.exe"
+
+  - name: "Adobe Lightroom"
+    path: vm
+    category: "Photo Management"
+    exe_patterns:
+      - "*Lightroom*Setup*.exe"
+      - "*lightroom*.exe"
+
+  - name: "Adobe InDesign"
+    path: vm
+    category: "Desktop Publishing"
+    exe_patterns:
+      - "*InDesign*Setup*.exe"
+      - "*indesign*.exe"
+
+  - name: "Adobe Creative Cloud"
+    path: vm
+    category: "Creative Suite"
+    exe_patterns:
+      - "Creative*Cloud*.exe"
+      - "CCSetup*.exe"
+      - "ACC*.exe"
+
+  # Autodesk
+  - name: "Autodesk AutoCAD"
+    path: vm
+    category: "CAD"
+    exe_patterns:
+      - "*AutoCAD*Setup*.exe"
+      - "*acad*.exe"
+
+  - name: "Autodesk Maya"
+    path: vm
+    category: "3D Animation"
+    exe_patterns:
+      - "*Maya*Setup*.exe"
+      - "maya*.exe"
+
+  - name: "Autodesk 3ds Max"
+    path: vm
+    category: "3D Modeling"
+    exe_patterns:
+      - "*3dsMax*Setup*.exe"
+      - "3dsmax*.exe"
+
+  - name: "Autodesk Revit"
+    path: vm
+    category: "BIM"
+    exe_patterns:
+      - "*Revit*Setup*.exe"
+      - "revit*.exe"
+
+  - name: "Autodesk Inventor"
+    path: vm
+    category: "CAD/CAM"
+    exe_patterns:
+      - "*Inventor*Setup*.exe"
+      - "inventor*.exe"
+
+  - name: "Autodesk Fusion 360"
+    path: vm
+    category: "CAD/CAM"
+    exe_patterns:
+      - "*Fusion*360*.exe"
+      - "fusion*.exe"
+
+  # Engineering
+  - name: "SolidWorks"
+    path: vm
+    category: "CAD/CAM"
+    exe_patterns:
+      - "*SolidWorks*Setup*.exe"
+      - "*SOLIDWORKS*.exe"
+
+  - name: "CATIA"
+    path: vm
+    category: "CAD/CAM"
+    exe_patterns:
+      - "*CATIA*Setup*.exe"
+      - "catia*.exe"
+
+  - name: "Siemens NX"
+    path: vm
+    category: "CAD/CAM"
+    exe_patterns:
+      - "*NX*Setup*.exe"
+      - "ugraf.exe"
+
+  - name: "PTC Creo"
+    path: vm
+    category: "CAD/CAM"
+    exe_patterns:
+      - "*Creo*Setup*.exe"
+      - "xtop.exe"
+
+  - name: "ANSYS"
+    path: vm
+    category: "Simulation"
+    exe_patterns:
+      - "*ANSYS*Setup*.exe"
+      - "ansys*.exe"
+
+  - name: "MATLAB"
+    path: vm
+    category: "Engineering"
+    exe_patterns:
+      - "*MATLAB*Setup*.exe"
+      - "setup.exe"
+    notes: "Native Linux version available, but some toolboxes may require Windows."
+
+  # Other Professional
+  - name: "Ableton Live"
+    path: vm
+    category: "Audio Production"
+    exe_patterns:
+      - "*Ableton*Setup*.exe"
+      - "Ableton*.exe"
+
+  - name: "FL Studio"
+    path: vm
+    category: "Audio Production"
+    exe_patterns:
+      - "*FL*Studio*Setup*.exe"
+      - "FL*.exe"
+
+  - name: "Pro Tools"
+    path: vm
+    category: "Audio Production"
+    exe_patterns:
+      - "*Pro*Tools*Setup*.exe"
+      - "ProTools*.exe"
+
+  - name: "Logic Pro"
+    path: vm
+    category: "Audio Production"
+    notes: "macOS only - requires macOS VM (not currently supported)"
+
+  - name: "Final Cut Pro"
+    path: vm
+    category: "Video Editing"
+    notes: "macOS only - requires macOS VM (not currently supported)"

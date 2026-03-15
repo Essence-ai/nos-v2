@@ -1,0 +1,51 @@
+name: Build NeuronOS ISO
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update system and install archiso
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm archiso git
+
+      - name: Build ISO
+        run: |
+          mkarchiso -v -w /tmp/work -o /tmp/out .
+
+      - name: Get ISO filename
+        id: iso_name
+        run: |
+          echo "filename=$(ls /tmp/out/*.iso | head -1 | xargs basename)" >> $GITHUB_OUTPUT
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuronos-iso-${{ github.sha }}
+          path: /tmp/out/*.iso
+          retention-days: 7
+
+      - name: Upload ISO checksum
+        run: |
+          cd /tmp/out
+          sha256sum *.iso > SHA256SUMS
+
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuronos-checksums-${{ github.sha }}
+          path: /tmp/out/SHA256SUMS

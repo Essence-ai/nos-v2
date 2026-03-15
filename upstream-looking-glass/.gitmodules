@@ -1,0 +1,15 @@
+[submodule "LGMP"]
+	path = repos/LGMP
+	url = https://github.com/gnif/LGMP.git
+[submodule "repos/PureSpice"]
+	path = repos/PureSpice
+	url = https://github.com/gnif/PureSpice
+[submodule "repos/cimgui"]
+	path = repos/cimgui
+	url = https://github.com/cimgui/cimgui.git
+[submodule "repos/wayland-protocols"]
+	path = repos/wayland-protocols
+	url = https://github.com/quantum5/wayland-protocols.git
+[submodule "repos/nanosvg"]
+	path = repos/nanosvg
+	url = https://github.com/memononen/nanosvg.git

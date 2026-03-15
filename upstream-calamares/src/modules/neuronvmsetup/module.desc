@@ -1,0 +1,5 @@
+---
+type:       "viewmodule"
+name:       "neuronvmsetup"
+interface:  "python"
+script:     "main.py"

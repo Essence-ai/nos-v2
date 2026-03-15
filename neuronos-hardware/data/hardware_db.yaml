@@ -1,0 +1,146 @@
+# NeuronOS Hardware Compatibility Database
+# This file contains known hardware configurations, their compatibility status,
+# and any quirks or workarounds needed.
+
+gpus:
+  # NVIDIA GPUs - RTX 40 Series
+  - vendor_id: "10de"
+    device_id: "2684"
+    name: "NVIDIA GeForce RTX 4090"
+    status: "verified"
+    notes: "Full support with GPU passthrough. Requires Code 43 workaround."
+
+  - vendor_id: "10de"
+    device_id: "2782"
+    name: "NVIDIA GeForce RTX 4080"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  - vendor_id: "10de"
+    device_id: "2704"
+    name: "NVIDIA GeForce RTX 4080 SUPER"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  - vendor_id: "10de"
+    device_id: "2783"
+    name: "NVIDIA GeForce RTX 4070 Ti SUPER"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  # NVIDIA GPUs - RTX 30 Series
+  - vendor_id: "10de"
+    device_id: "2204"
+    name: "NVIDIA GeForce RTX 3090"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  - vendor_id: "10de"
+    device_id: "2206"
+    name: "NVIDIA GeForce RTX 3080"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  - vendor_id: "10de"
+    device_id: "2484"
+    name: "NVIDIA GeForce RTX 3070"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  - vendor_id: "10de"
+    device_id: "2503"
+    name: "NVIDIA GeForce RTX 3060"
+    status: "verified"
+    notes: "Full support with GPU passthrough."
+
+  # AMD GPUs - RX 7000 Series
+  - vendor_id: "1002"
+    device_id: "744c"
+    name: "AMD Radeon RX 7900 XTX"
+    status: "verified"
+    notes: "Full support. Reset bug fixed in recent kernels."
+
+  - vendor_id: "1002"
+    device_id: "7448"
+    name: "AMD Radeon RX 7900 XT"
+    status: "verified"
+    notes: "Full support."
+
+  - vendor_id: "1002"
+    device_id: "7480"
+    name: "AMD Radeon RX 7800 XT"
+    status: "verified"
+    notes: "Full support."
+
+  # AMD GPUs - RX 6000 Series
+  - vendor_id: "1002"
+    device_id: "73bf"
+    name: "AMD Radeon RX 6900 XT"
+    status: "verified"
+    notes: "May require vendor-reset module for clean VM restarts."
+
+  - vendor_id: "1002"
+    device_id: "73af"
+    name: "AMD Radeon RX 6800 XT"
+    status: "verified"
+    notes: "May require vendor-reset module."
+
+  - vendor_id: "1002"
+    device_id: "73df"
+    name: "AMD Radeon RX 6700 XT"
+    status: "works"
+    notes: "Generally works, occasional reset issues."
+
+  # Intel Arc GPUs
+  - vendor_id: "8086"
+    device_id: "56a0"
+    name: "Intel Arc A770"
+    status: "partial"
+    notes: "Passthrough works but driver support is still maturing."
+
+  - vendor_id: "8086"
+    device_id: "56a1"
+    name: "Intel Arc A750"
+    status: "partial"
+    notes: "Passthrough works but driver support is still maturing."
+
+  # Intel Integrated GPUs (for host display)
+  - vendor_id: "8086"
+    device_id: "9a49"
+    name: "Intel UHD Graphics (11th Gen)"
+    status: "verified"
+    notes: "Ideal for host display while dGPU passes through."
+
+  - vendor_id: "8086"
+    device_id: "4680"
+    name: "Intel UHD Graphics (12th Gen)"
+    status: "verified"
+    notes: "Ideal for host display."
+
+  - vendor_id: "8086"
+    device_id: "a780"
+    name: "Intel UHD Graphics (13th Gen)"
+    status: "verified"
+    notes: "Ideal for host display."
+
+quirks:
+  # NVIDIA-wide quirks
+  - vendor_id: "10de"
+    device_id: null  # Applies to all NVIDIA GPUs
+    description: "NVIDIA Code 43 error in VM"
+    workaround: "Enable <kvm><hidden state='on'/> and use fake vendor_id in domain XML."
+    severity: "warning"
+
+  # AMD reset bug
+  - vendor_id: "1002"
+    device_id: null  # Applies to many AMD GPUs
+    description: "AMD GPU reset bug prevents clean VM restarts"
+    workaround: "Install vendor-reset kernel module from https://github.com/gnif/vendor-reset"
+    severity: "warning"
+
+  # Intel Arc
+  - vendor_id: "8086"
+    device_id: "56a0"
+    description: "Intel Arc driver support is evolving"
+    workaround: "Use latest kernel (6.6+) for best compatibility."
+    severity: "info"

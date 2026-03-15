@@ -1,0 +1,35 @@
+---
+# NeuronOS Branding Configuration
+
+componentName: neuronos
+
+# Product information
+strings:
+    productName:         "NeuronOS"
+    shortProductName:    "NeuronOS"
+    version:             "1.0"
+    shortVersion:        "1.0"
+    versionedName:       "NeuronOS 1.0"
+    shortVersionedName:  "NeuronOS 1.0"
+    bootloaderEntryName: "NeuronOS"
+    productUrl:          "https://neuronos.org"
+    supportUrl:          "https://github.com/neuronos/neuronos/issues"
+    knownIssuesUrl:      "https://github.com/neuronos/neuronos/issues"
+    releaseNotesUrl:     "https://github.com/neuronos/neuronos/releases"
+
+# Visual elements
+images:
+    productLogo:         "logo.png"
+    productIcon:         "icon.png"
+    productWelcome:      "welcome.png"
+
+# Slideshow during installation
+slideshow:               "show.qml"
+slideshowAPI: 2
+
+# Stylesheet
+style:
+    sidebarBackground:   "#2d2d2d"
+    sidebarText:         "#ffffff"
+    sidebarTextSelect:   "#4fc3f7"
+    sidebarTextHighlight:"#ffffff"

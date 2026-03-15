@@ -1,0 +1,5 @@
+---
+type:       "job"
+name:       "neuronbtrfs"
+interface:  "python"
+script:     "main.py"

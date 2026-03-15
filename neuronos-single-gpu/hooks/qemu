@@ -1,0 +1,52 @@
+#!/bin/bash
+# /etc/libvirt/hooks/qemu
+# Called by libvirt for every VM lifecycle event.
+# Arguments: $1=VM_NAME $2=OPERATION $3=SUB_OPERATION
+
+VM_NAME="$1"
+OPERATION="$2"
+SUB_OPERATION="$3"
+
+# Log the event
+logger -t neuronos-libvirt-hook "VM: $VM_NAME, Operation: $OPERATION/$SUB_OPERATION"
+
+# Only act on our NeuronOS VM
+if [ "$VM_NAME" != "win11-neuron" ]; then
+    exit 0
+fi
+
+# Check if we're in single-GPU mode
+PROFILE="/etc/neuronos/hardware-profile.json"
+if [ ! -f "$PROFILE" ]; then
+    exit 0
+fi
+
+CAPABILITY=$(jq -r '.capability // empty' "$PROFILE")
+if [ "$CAPABILITY" != "single_gpu" ]; then
+    exit 0
+fi
+
+# Script directory
+SCRIPT_DIR="/usr/lib/neuronos"
+
+case "$OPERATION/$SUB_OPERATION" in
+    prepare/begin)
+        logger -t neuronos-libvirt-hook "Switching GPU to VM..."
+        "$SCRIPT_DIR/gpu-switch-to-vm.sh" || {
+            logger -t neuronos-libvirt-hook -p err "GPU switch to VM failed"
+            exit 1
+        }
+        ;;
+    release/end)
+        logger -t neuronos-libvirt-hook "Switching GPU back to host..."
+        "$SCRIPT_DIR/gpu-switch-to-host.sh" || {
+            logger -t neuronos-libvirt-hook -p err "GPU switch to host failed"
+            exit 1
+        }
+        ;;
+    *)
+        # Other operations, no action needed
+        ;;
+esac
+
+exit 0

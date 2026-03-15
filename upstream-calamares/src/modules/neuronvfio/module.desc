@@ -1,0 +1,5 @@
+---
+type:       "job"
+name:       "neuronvfio"
+interface:  "python"
+script:     "main.py"

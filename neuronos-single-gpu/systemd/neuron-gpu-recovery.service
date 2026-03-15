@@ -1,0 +1,14 @@
+[Unit]
+Description=NeuronOS GPU Recovery Failsafe
+After=multi-user.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/neuronos/gpu-recovery-check.sh
+RemainAfterExit=no
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

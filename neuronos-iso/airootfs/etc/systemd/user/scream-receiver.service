@@ -1,0 +1,11 @@
+[Unit]
+Description=Scream Audio Receiver
+After=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/scream -o pipewire -m /dev/shm/scream-ivshmem
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

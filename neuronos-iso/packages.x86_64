@@ -1,0 +1,249 @@
+# ============================================================
+# NeuronOS Package List
+# Based on Archiso releng profile + NeuronOS additions
+# ============================================================
+
+# =========================
+# BASE ARCHISO PACKAGES
+# =========================
+alsa-utils
+amd-ucode
+arch-install-scripts
+b43-fwcutter
+base
+base-devel
+bcachefs-tools
+bind
+bolt
+brltty
+broadcom-wl
+btrfs-progs
+clonezilla
+cryptsetup
+darkhttpd
+ddrescue
+dhcpcd
+diffutils
+dmidecode
+dmraid
+dnsmasq
+dosfstools
+e2fsprogs
+edk2-shell
+efibootmgr
+espeakup
+ethtool
+exfatprogs
+f2fs-tools
+fatresize
+foot-terminfo
+fsarchiver
+gpart
+gpm
+gptfdisk
+grml-zsh-config
+grub
+hdparm
+hyperv
+intel-ucode
+irssi
+iw
+iwd
+jfsutils
+kitty-terminfo
+ldns
+less
+lftp
+libfido2
+libusb-compat
+linux
+linux-atm
+linux-firmware
+linux-firmware-marvell
+linux-headers
+livecd-sounds
+lsscsi
+lvm2
+lynx
+man-db
+man-pages
+mc
+mdadm
+memtest86+
+memtest86+-efi
+mkinitcpio
+mkinitcpio-archiso
+mkinitcpio-nfs-utils
+mmc-utils
+modemmanager
+mtools
+nano
+nbd
+ndisc6
+nfs-utils
+nilfs-utils
+nmap
+ntfs-3g
+nvme-cli
+open-iscsi
+open-vm-tools
+openconnect
+openpgp-card-tools
+openssh
+openvpn
+partclone
+parted
+partimage
+pcsclite
+ppp
+pptpclient
+pv
+qemu-guest-agent
+refind
+reflector
+rsync
+rxvt-unicode-terminfo
+screen
+sdparm
+sequoia-sq
+sg3_utils
+smartmontools
+sof-firmware
+squashfs-tools
+sudo
+syslinux
+systemd-resolvconf
+tcpdump
+terminus-font
+testdisk
+tmux
+tpm2-tools
+tpm2-tss
+udftools
+usb_modeswitch
+usbmuxd
+usbutils
+vim
+virtualbox-guest-utils
+vpnc
+wireless-regdb
+wireless_tools
+wpa_supplicant
+wvdial
+xdg-utils
+xfsprogs
+xl2tpd
+zsh
+
+# =========================
+# NEURONOS: DESKTOP
+# =========================
+plasma-meta
+plasma-wayland-session
+kde-applications-meta
+sddm
+xdg-desktop-portal
+xdg-desktop-portal-kde
+xdg-desktop-portal-gtk
+networkmanager
+network-manager-applet
+bluez
+bluez-utils
+bluedevil
+
+# =========================
+# NEURONOS: AUDIO
+# =========================
+pipewire
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+
+# =========================
+# NEURONOS: VIRTUALIZATION
+# =========================
+qemu-full
+libvirt
+virt-manager
+edk2-ovmf
+bridge-utils
+iptables-nft
+openbsd-netcat
+
+# =========================
+# NEURONOS: GPU PASSTHROUGH
+# =========================
+# vfio-pci is built into kernel
+# looking-glass - built from upstream-looking-glass
+# scream - built from upstream-scream
+
+# =========================
+# NEURONOS: FILESYSTEM & ROLLBACK
+# =========================
+snapper
+snap-pac
+grub-btrfs
+
+# =========================
+# NEURONOS: INSTALLER
+# =========================
+# calamares - built from upstream-calamares with NeuronOS modules
+
+# =========================
+# NEURONOS: PYTHON STACK
+# =========================
+python
+python-pip
+python-libvirt
+python-yaml
+python-dbus
+pyside6
+qt6-base
+qt6-wayland
+
+# =========================
+# NEURONOS: BUILD DEPENDENCIES
+# =========================
+cmake
+meson
+ninja
+pkgconf
+gcc
+make
+git
+wget
+curl
+jq
+
+# =========================
+# NEURONOS: APPLICATIONS
+# =========================
+firefox
+konsole
+dolphin
+kate
+ark
+spectacle
+gwenview
+okular
+vlc
+
+# =========================
+# NEURONOS: FONTS
+# =========================
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+ttf-liberation
+ttf-dejavu
+
+# =========================
+# NEURONOS: UTILITIES
+# =========================
+htop
+btop
+neofetch
+fastfetch
+xclip
+wl-clipboard

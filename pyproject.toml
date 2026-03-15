@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuronos"
+version = "0.1.0"
+description = "NeuronOS - The desktop operating system that runs all your applications"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "NeuronOS Project", email = "dev@neuronos.org"}
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Operating System",
+]
+
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+hardware = [
+    "neuron-hw",
+]
+vm-manager = [
+    "neuronos-vm-manager",
+]
+gui = [
+    "PySide6>=6.5.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+all = [
+    "neuronos[hardware,vm-manager,gui,dev]",
+]
+
+[project.urls]
+Homepage = "https://neuronos.org"
+Documentation = "https://docs.neuronos.org"
+Repository = "https://github.com/neuronos/neuronos"
+Issues = "https://github.com/neuronos/neuronos/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["neuronos-*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=neuronos"
+testpaths = [
+    "neuronos-hardware/tests",
+    "neuronos-vm-manager/tests",
+]

@@ -1,0 +1,106 @@
+# ============================================================
+# NeuronOS .gitignore
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Testing
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.hypothesis/
+
+# Documentation builds
+docs/_build/
+site/
+_build/
+
+# Build directories
+build/
+*.iso
+iso-work/
+iso-output/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local configuration
+.env
+.env.local
+config.local.json
+
+# Build artifacts
+*.qcow2
+*.img
+*.vmdk
+
+# Package manager
+.cache/
+pip-wheel-metadata/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Upstream build directories (these get created during build)
+upstream-calamares/build/
+upstream-looking-glass/client/build/
+upstream-scream/Receivers/*/build/
+
+# Don't ignore upstream repos themselves
+# They are needed for the project to work
+!upstream-archiso/
+!upstream-calamares/
+!upstream-looking-glass/
+!upstream-scream/
