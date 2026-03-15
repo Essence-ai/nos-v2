@@ -139,7 +139,7 @@ zsh
 # NEURONOS: DESKTOP
 # =========================
 plasma-meta
-plasma-wayland-session
+plasma-desktop
 kde-applications-meta
 sddm
 xdg-desktop-portal
@@ -167,7 +167,6 @@ qemu-full
 libvirt
 virt-manager
 edk2-ovmf
-bridge-utils
 iptables-nft
 openbsd-netcat
 
@@ -195,10 +194,10 @@ grub-btrfs
 # =========================
 python
 python-pip
-python-libvirt
+libvirt-python
 python-yaml
 python-dbus
-pyside6
+python-pyside6
 qt6-base
 qt6-wayland
 
@@ -243,7 +242,6 @@ ttf-dejavu
 # =========================
 htop
 btop
-neofetch
 fastfetch
 xclip
 wl-clipboard
