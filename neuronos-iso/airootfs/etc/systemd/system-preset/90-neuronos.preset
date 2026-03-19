@@ -1,0 +1,4 @@
+enable sddm.service
+enable NetworkManager.service
+enable libvirtd.service
+disable getty@tty1.service

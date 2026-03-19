@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Welcome to NeuronOS
+Comment=NeuronOS Setup and Welcome Wizard
+Exec=/usr/bin/neuronos-welcome
+Icon=neuronos
+Terminal=false
+Categories=System;Settings;
+StartupNotify=true
+X-GNOME-Autostart-enabled=true

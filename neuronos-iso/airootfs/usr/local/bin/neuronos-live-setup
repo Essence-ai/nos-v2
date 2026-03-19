@@ -1,0 +1,27 @@
+#!/bin/bash
+# NeuronOS Live Environment Setup Script
+
+set -e
+
+# Enable SDDM display manager
+systemctl enable sddm.service
+systemctl set-default graphical.target
+
+# Enable NetworkManager
+systemctl enable NetworkManager.service
+
+# Create liveuser home directory if it doesn't exist
+if [ ! -d /home/liveuser ]; then
+    mkdir -p /home/liveuser/Desktop
+    chown -R 1000:1000 /home/liveuser
+fi
+
+# Make sure the desktop file is executable
+chmod +x /home/liveuser/Desktop/install-neuronos.desktop 2>/dev/null || true
+
+# Start SDDM if not already running
+if ! systemctl is-active --quiet sddm; then
+    systemctl start sddm.service
+fi
+
+echo "NeuronOS live environment setup complete"

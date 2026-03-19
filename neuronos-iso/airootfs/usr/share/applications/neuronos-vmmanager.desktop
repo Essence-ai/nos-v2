@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NeuronOS VM Manager
+Comment=Manage Windows VM and applications
+Exec=/usr/bin/neuronos-vmmanager
+Icon=computer
+Terminal=false
+Categories=System;Utility;
+StartupNotify=true
+Keywords=windows;vm;virtual;machine;

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Welcome to NeuronOS
+Exec=/usr/bin/neuronos-welcome
+Icon=help-about
+Terminal=false
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=KDE;

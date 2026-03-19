@@ -1,0 +1,378 @@
+#!/usr/bin/env python3
+"""
+NeuronOS VM Manager - System Tray Application
+Provides quick access to Windows VM and applications.
+"""
+
+import sys
+import subprocess
+import json
+from pathlib import Path
+
+try:
+    from PySide6.QtWidgets import (
+        QApplication, QSystemTrayIcon, QMenu, QMainWindow,
+        QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+        QProgressBar, QListWidget, QListWidgetItem, QFrame,
+        QMessageBox, QDialog, QLineEdit, QFormLayout
+    )
+    from PySide6.QtCore import Qt, QTimer, Signal, QThread
+    from PySide6.QtGui import QIcon, QAction, QFont
+except ImportError:
+    print("PySide6 not available")
+    sys.exit(1)
+
+
+class VMStatusThread(QThread):
+    """Check VM status in background."""
+    status_changed = Signal(str, str)  # state, details
+
+    def __init__(self):
+        super().__init__()
+        self.running = True
+
+    def run(self):
+        while self.running:
+            try:
+                result = subprocess.run(
+                    ["virsh", "domstate", "win11-neuron"],
+                    capture_output=True, text=True, timeout=5
+                )
+                state = result.stdout.strip()
+                if "running" in state.lower():
+                    self.status_changed.emit("running", "Windows VM is running")
+                elif "paused" in state.lower():
+                    self.status_changed.emit("paused", "Windows VM is paused")
+                else:
+                    self.status_changed.emit("stopped", "Windows VM is stopped")
+            except:
+                self.status_changed.emit("unknown", "Could not determine VM state")
+
+            self.msleep(5000)  # Check every 5 seconds
+
+    def stop(self):
+        self.running = False
+
+
+class VMManagerWindow(QMainWindow):
+    """Main VM Manager window."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("NeuronOS VM Manager")
+        self.setMinimumSize(500, 400)
+
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+
+        # Status section
+        status_frame = QFrame()
+        status_frame.setFrameStyle(QFrame.StyledPanel)
+        status_layout = QHBoxLayout(status_frame)
+
+        self.status_icon = QLabel("⚫")
+        self.status_icon.setFont(QFont("Sans", 24))
+        status_layout.addWidget(self.status_icon)
+
+        status_text_layout = QVBoxLayout()
+        self.status_label = QLabel("Windows VM")
+        self.status_label.setFont(QFont("Sans", 14, QFont.Bold))
+        self.status_detail = QLabel("Checking status...")
+        status_text_layout.addWidget(self.status_label)
+        status_text_layout.addWidget(self.status_detail)
+        status_layout.addLayout(status_text_layout)
+
+        status_layout.addStretch()
+
+        layout.addWidget(status_frame)
+
+        # Control buttons
+        btn_layout = QHBoxLayout()
+
+        self.start_btn = QPushButton("▶ Start VM")
+        self.start_btn.clicked.connect(self.start_vm)
+        btn_layout.addWidget(self.start_btn)
+
+        self.stop_btn = QPushButton("⏹ Stop VM")
+        self.stop_btn.clicked.connect(self.stop_vm)
+        btn_layout.addWidget(self.stop_btn)
+
+        self.pause_btn = QPushButton("⏸ Pause")
+        self.pause_btn.clicked.connect(self.pause_vm)
+        btn_layout.addWidget(self.pause_btn)
+
+        layout.addLayout(btn_layout)
+
+        # Looking Glass button
+        self.lg_btn = QPushButton("🖥 Open Windows Display (Looking Glass)")
+        self.lg_btn.setMinimumHeight(40)
+        self.lg_btn.clicked.connect(self.open_looking_glass)
+        layout.addWidget(self.lg_btn)
+
+        # Applications section
+        apps_label = QLabel("Windows Applications")
+        apps_label.setFont(QFont("Sans", 12, QFont.Bold))
+        layout.addWidget(apps_label)
+
+        self.apps_list = QListWidget()
+        self.apps_list.itemDoubleClicked.connect(self.launch_app)
+        layout.addWidget(self.apps_list)
+
+        # Add app button
+        add_app_btn = QPushButton("+ Add Application Shortcut")
+        add_app_btn.clicked.connect(self.add_app_shortcut)
+        layout.addWidget(add_app_btn)
+
+        # Load saved apps
+        self.load_apps()
+
+        # Current state
+        self.vm_state = "unknown"
+
+    def update_status(self, state, details):
+        self.vm_state = state
+        self.status_detail.setText(details)
+
+        if state == "running":
+            self.status_icon.setText("🟢")
+            self.start_btn.setEnabled(False)
+            self.stop_btn.setEnabled(True)
+            self.pause_btn.setEnabled(True)
+            self.lg_btn.setEnabled(True)
+        elif state == "paused":
+            self.status_icon.setText("🟡")
+            self.start_btn.setEnabled(True)
+            self.start_btn.setText("▶ Resume")
+            self.stop_btn.setEnabled(True)
+            self.pause_btn.setEnabled(False)
+            self.lg_btn.setEnabled(False)
+        else:
+            self.status_icon.setText("⚫")
+            self.start_btn.setEnabled(True)
+            self.start_btn.setText("▶ Start VM")
+            self.stop_btn.setEnabled(False)
+            self.pause_btn.setEnabled(False)
+            self.lg_btn.setEnabled(False)
+
+    def start_vm(self):
+        try:
+            if self.vm_state == "paused":
+                subprocess.run(["virsh", "resume", "win11-neuron"], check=True)
+            else:
+                subprocess.run(["virsh", "start", "win11-neuron"], check=True)
+        except subprocess.CalledProcessError as e:
+            QMessageBox.warning(self, "Error", f"Failed to start VM: {e}")
+
+    def stop_vm(self):
+        reply = QMessageBox.question(
+            self, "Stop VM",
+            "Are you sure you want to stop the Windows VM?\n"
+            "Make sure to save your work first.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            try:
+                subprocess.run(["virsh", "shutdown", "win11-neuron"], check=True)
+            except:
+                try:
+                    subprocess.run(["virsh", "destroy", "win11-neuron"], check=True)
+                except subprocess.CalledProcessError as e:
+                    QMessageBox.warning(self, "Error", f"Failed to stop VM: {e}")
+
+    def pause_vm(self):
+        try:
+            subprocess.run(["virsh", "suspend", "win11-neuron"], check=True)
+        except subprocess.CalledProcessError as e:
+            QMessageBox.warning(self, "Error", f"Failed to pause VM: {e}")
+
+    def open_looking_glass(self):
+        try:
+            subprocess.Popen(["looking-glass-client", "-F"])
+        except FileNotFoundError:
+            QMessageBox.warning(
+                self, "Error",
+                "Looking Glass client not found.\n"
+                "Please install it first."
+            )
+
+    def load_apps(self):
+        self.apps_list.clear()
+        apps_file = Path.home() / ".config" / "neuronos" / "vm_apps.json"
+        if apps_file.exists():
+            try:
+                apps = json.loads(apps_file.read_text())
+                for app in apps:
+                    item = QListWidgetItem(f"🪟 {app['name']}")
+                    item.setData(Qt.UserRole, app)
+                    self.apps_list.addItem(item)
+            except:
+                pass
+
+        # Add default hint if empty
+        if self.apps_list.count() == 0:
+            hint = QListWidgetItem("Double-click to launch apps. Add shortcuts below.")
+            hint.setFlags(hint.flags() & ~Qt.ItemIsEnabled)
+            self.apps_list.addItem(hint)
+
+    def launch_app(self, item):
+        app_data = item.data(Qt.UserRole)
+        if app_data:
+            # Start VM if not running
+            if self.vm_state != "running":
+                self.start_vm()
+            # TODO: Launch app in VM via QEMU guest agent
+            QMessageBox.information(
+                self, "Launch App",
+                f"Would launch: {app_data['name']}\n\n"
+                "(VM guest agent integration coming soon)"
+            )
+
+    def add_app_shortcut(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Application Shortcut")
+        layout = QFormLayout(dialog)
+
+        name_edit = QLineEdit()
+        path_edit = QLineEdit()
+        path_edit.setPlaceholderText("C:\\Program Files\\...")
+
+        layout.addRow("Name:", name_edit)
+        layout.addRow("Path in Windows:", path_edit)
+
+        btn_layout = QHBoxLayout()
+        ok_btn = QPushButton("Add")
+        cancel_btn = QPushButton("Cancel")
+        ok_btn.clicked.connect(dialog.accept)
+        cancel_btn.clicked.connect(dialog.reject)
+        btn_layout.addWidget(ok_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addRow(btn_layout)
+
+        if dialog.exec() == QDialog.Accepted and name_edit.text():
+            self.save_app({
+                "name": name_edit.text(),
+                "path": path_edit.text()
+            })
+            self.load_apps()
+
+    def save_app(self, app):
+        apps_dir = Path.home() / ".config" / "neuronos"
+        apps_dir.mkdir(parents=True, exist_ok=True)
+        apps_file = apps_dir / "vm_apps.json"
+
+        apps = []
+        if apps_file.exists():
+            try:
+                apps = json.loads(apps_file.read_text())
+            except:
+                pass
+
+        apps.append(app)
+        apps_file.write_text(json.dumps(apps, indent=2))
+
+
+class NeuronOSTray(QSystemTrayIcon):
+    """System tray icon for quick VM access."""
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+        self.manager_window = None
+
+        # Set icon (using text emoji as fallback)
+        self.setIcon(QIcon.fromTheme("computer", QIcon.fromTheme("utilities-system-monitor")))
+        self.setToolTip("NeuronOS VM Manager")
+
+        # Create menu
+        menu = QMenu()
+
+        self.status_action = QAction("VM: Checking...", self)
+        self.status_action.setEnabled(False)
+        menu.addAction(self.status_action)
+
+        menu.addSeparator()
+
+        start_action = QAction("Start Windows VM", self)
+        start_action.triggered.connect(self.start_vm)
+        menu.addAction(start_action)
+
+        stop_action = QAction("Stop Windows VM", self)
+        stop_action.triggered.connect(self.stop_vm)
+        menu.addAction(stop_action)
+
+        menu.addSeparator()
+
+        lg_action = QAction("Open Windows Display", self)
+        lg_action.triggered.connect(self.open_looking_glass)
+        menu.addAction(lg_action)
+
+        manager_action = QAction("VM Manager...", self)
+        manager_action.triggered.connect(self.show_manager)
+        menu.addAction(manager_action)
+
+        menu.addSeparator()
+
+        quit_action = QAction("Quit", self)
+        quit_action.triggered.connect(app.quit)
+        menu.addAction(quit_action)
+
+        self.setContextMenu(menu)
+
+        # Connect click
+        self.activated.connect(self.on_activated)
+
+        # Status checker
+        self.status_thread = VMStatusThread()
+        self.status_thread.status_changed.connect(self.update_status)
+        self.status_thread.start()
+
+    def update_status(self, state, details):
+        self.status_action.setText(f"VM: {state.title()}")
+        if self.manager_window:
+            self.manager_window.update_status(state, details)
+
+    def on_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show_manager()
+
+    def show_manager(self):
+        if not self.manager_window:
+            self.manager_window = VMManagerWindow()
+            self.status_thread.status_changed.connect(self.manager_window.update_status)
+        self.manager_window.show()
+        self.manager_window.raise_()
+        self.manager_window.activateWindow()
+
+    def start_vm(self):
+        subprocess.Popen(["virsh", "start", "win11-neuron"])
+
+    def stop_vm(self):
+        subprocess.Popen(["virsh", "shutdown", "win11-neuron"])
+
+    def open_looking_glass(self):
+        subprocess.Popen(["looking-glass-client", "-F"])
+
+    def cleanup(self):
+        self.status_thread.stop()
+        self.status_thread.wait()
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+    app.setApplicationName("NeuronOS VM Manager")
+
+    if not QSystemTrayIcon.isSystemTrayAvailable():
+        # Fall back to window mode
+        window = VMManagerWindow()
+        window.show()
+    else:
+        tray = NeuronOSTray(app)
+        tray.show()
+
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""
+NeuronOS Welcome Wizard
+First-boot experience that guides users through setup.
+"""
+
+import sys
+import subprocess
+import json
+from pathlib import Path
+
+try:
+    from PySide6.QtWidgets import (
+        QApplication, QWizard, QWizardPage, QVBoxLayout, QHBoxLayout,
+        QLabel, QPushButton, QProgressBar, QCheckBox, QFrame, QMessageBox
+    )
+    from PySide6.QtCore import Qt, QThread, Signal
+    from PySide6.QtGui import QFont, QPixmap
+except ImportError:
+    # Fallback if PySide6 not available
+    print("PySide6 not available. Please install it.")
+    sys.exit(1)
+
+
+class HardwareDetectionThread(QThread):
+    """Background thread for hardware detection."""
+    finished = Signal(dict)
+    progress = Signal(str)
+
+    def run(self):
+        self.progress.emit("Detecting CPU...")
+        result = {"cpu_vendor": "", "gpus": [], "capability": "unknown"}
+
+        # Detect CPU vendor
+        try:
+            with open("/proc/cpuinfo") as f:
+                cpuinfo = f.read()
+            if "GenuineIntel" in cpuinfo:
+                result["cpu_vendor"] = "Intel"
+            elif "AuthenticAMD" in cpuinfo:
+                result["cpu_vendor"] = "AMD"
+        except:
+            pass
+
+        self.progress.emit("Detecting GPUs...")
+
+        # Detect GPUs using lspci
+        try:
+            output = subprocess.check_output(
+                ["lspci", "-nn"], text=True
+            )
+            for line in output.split("\n"):
+                if "VGA" in line or "3D controller" in line:
+                    result["gpus"].append(line.strip())
+        except:
+            pass
+
+        self.progress.emit("Checking IOMMU...")
+
+        # Check IOMMU
+        try:
+            dmesg = subprocess.check_output(
+                ["dmesg"], text=True, stderr=subprocess.DEVNULL
+            )
+            if "IOMMU enabled" in dmesg or "DMAR" in dmesg or "AMD-Vi" in dmesg:
+                result["iommu_enabled"] = True
+            else:
+                result["iommu_enabled"] = False
+        except:
+            result["iommu_enabled"] = False
+
+        # Determine capability
+        gpu_count = len(result["gpus"])
+        if not result["iommu_enabled"]:
+            result["capability"] = "no_passthrough"
+        elif gpu_count >= 2:
+            result["capability"] = "dual_gpu"
+        elif gpu_count == 1:
+            result["capability"] = "single_gpu"
+        else:
+            result["capability"] = "no_passthrough"
+
+        self.progress.emit("Detection complete!")
+        self.finished.emit(result)
+
+
+class WelcomePage(QWizardPage):
+    """Welcome page with NeuronOS introduction."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Welcome to NeuronOS")
+
+        layout = QVBoxLayout()
+
+        # Logo placeholder
+        logo_label = QLabel()
+        logo_label.setAlignment(Qt.AlignCenter)
+        logo_label.setText("🧠 NeuronOS")
+        logo_label.setFont(QFont("Sans", 32, QFont.Bold))
+        layout.addWidget(logo_label)
+
+        layout.addSpacing(20)
+
+        # Description
+        desc = QLabel(
+            "NeuronOS is designed to seamlessly run Windows applications\n"
+            "alongside your Linux desktop using GPU passthrough technology.\n\n"
+            "This wizard will help you set up your system for the best experience."
+        )
+        desc.setAlignment(Qt.AlignCenter)
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        layout.addStretch()
+
+        self.setLayout(layout)
+
+
+class HardwarePage(QWizardPage):
+    """Hardware detection page."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Hardware Detection")
+        self.setSubTitle("Analyzing your system for GPU passthrough compatibility...")
+
+        self.detection_complete = False
+        self.hw_result = {}
+
+        layout = QVBoxLayout()
+
+        self.status_label = QLabel("Click 'Detect Hardware' to begin...")
+        layout.addWidget(self.status_label)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0)  # Indeterminate
+        self.progress_bar.hide()
+        layout.addWidget(self.progress_bar)
+
+        self.detect_btn = QPushButton("Detect Hardware")
+        self.detect_btn.clicked.connect(self.start_detection)
+        layout.addWidget(self.detect_btn)
+
+        layout.addSpacing(20)
+
+        # Results frame
+        self.results_frame = QFrame()
+        self.results_frame.setFrameStyle(QFrame.StyledPanel)
+        self.results_frame.hide()
+
+        results_layout = QVBoxLayout()
+        self.cpu_label = QLabel()
+        self.gpu_label = QLabel()
+        self.iommu_label = QLabel()
+        self.capability_label = QLabel()
+        self.capability_label.setFont(QFont("Sans", 12, QFont.Bold))
+
+        results_layout.addWidget(self.cpu_label)
+        results_layout.addWidget(self.gpu_label)
+        results_layout.addWidget(self.iommu_label)
+        results_layout.addWidget(self.capability_label)
+
+        self.results_frame.setLayout(results_layout)
+        layout.addWidget(self.results_frame)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self.thread = None
+
+    def start_detection(self):
+        self.detect_btn.setEnabled(False)
+        self.progress_bar.show()
+        self.status_label.setText("Detecting hardware...")
+
+        self.thread = HardwareDetectionThread()
+        self.thread.progress.connect(self.on_progress)
+        self.thread.finished.connect(self.on_detection_complete)
+        self.thread.start()
+
+    def on_progress(self, message):
+        self.status_label.setText(message)
+
+    def on_detection_complete(self, result):
+        self.hw_result = result
+        self.detection_complete = True
+        self.progress_bar.hide()
+        self.detect_btn.hide()
+        self.results_frame.show()
+
+        self.cpu_label.setText(f"CPU: {result.get('cpu_vendor', 'Unknown')}")
+
+        gpus = result.get('gpus', [])
+        if gpus:
+            gpu_text = "GPUs detected:\n" + "\n".join(f"  • {g[:60]}..." if len(g) > 60 else f"  • {g}" for g in gpus)
+        else:
+            gpu_text = "GPUs: None detected"
+        self.gpu_label.setText(gpu_text)
+
+        iommu = "✓ Enabled" if result.get('iommu_enabled') else "✗ Not detected"
+        self.iommu_label.setText(f"IOMMU: {iommu}")
+
+        cap = result.get('capability', 'unknown')
+        cap_messages = {
+            'dual_gpu': "✓ Dual-GPU Setup - Best experience! Your iGPU will run Linux while dGPU runs Windows apps.",
+            'single_gpu': "⚠ Single-GPU Setup - Works with brief screen switching when launching Windows apps.",
+            'no_passthrough': "✗ GPU Passthrough not available - Check BIOS for IOMMU/VT-d settings.",
+            'unknown': "? Could not determine capability"
+        }
+        self.capability_label.setText(cap_messages.get(cap, cap))
+
+        self.completeChanged.emit()
+
+    def isComplete(self):
+        return self.detection_complete
+
+
+class SetupOptionsPage(QWizardPage):
+    """Options for what to set up."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Setup Options")
+        self.setSubTitle("Choose what you'd like to configure:")
+
+        layout = QVBoxLayout()
+
+        self.vm_checkbox = QCheckBox("Set up Windows VM for running Windows applications")
+        self.vm_checkbox.setChecked(True)
+        layout.addWidget(self.vm_checkbox)
+
+        self.vfio_checkbox = QCheckBox("Configure GPU passthrough (VFIO)")
+        self.vfio_checkbox.setChecked(True)
+        layout.addWidget(self.vfio_checkbox)
+
+        self.gaming_checkbox = QCheckBox("Install gaming tools (Steam, Proton, Lutris)")
+        layout.addWidget(self.gaming_checkbox)
+
+        layout.addSpacing(20)
+
+        note = QLabel(
+            "Note: You can always change these settings later in\n"
+            "NeuronOS Settings or by running this wizard again."
+        )
+        note.setStyleSheet("color: gray;")
+        layout.addWidget(note)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+
+class InstallPage(QWizardPage):
+    """Installation options - install to disk or continue live."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Install NeuronOS")
+        self.setSubTitle("Would you like to install NeuronOS to your computer?")
+
+        layout = QVBoxLayout()
+
+        desc = QLabel(
+            "You can install NeuronOS to your hard drive now, or continue\n"
+            "using the live environment to test things out first."
+        )
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        layout.addSpacing(20)
+
+        self.install_btn = QPushButton("Install NeuronOS to Disk")
+        self.install_btn.setMinimumHeight(50)
+        self.install_btn.clicked.connect(self.launch_installer)
+        layout.addWidget(self.install_btn)
+
+        layout.addSpacing(10)
+
+        self.continue_label = QLabel(
+            "Or click 'Finish' to continue using the live environment."
+        )
+        self.continue_label.setStyleSheet("color: gray;")
+        layout.addWidget(self.continue_label)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def launch_installer(self):
+        try:
+            subprocess.Popen(["sudo", "calamares"])
+            # Close the wizard
+            self.wizard().close()
+        except Exception as e:
+            QMessageBox.warning(
+                self, "Error",
+                f"Could not launch installer: {e}\n\n"
+                "You can launch it manually from the application menu."
+            )
+
+
+class FinishPage(QWizardPage):
+    """Final page with summary."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Setup Complete")
+
+        layout = QVBoxLayout()
+
+        desc = QLabel(
+            "🎉 NeuronOS is ready to use!\n\n"
+            "Here's what you can do next:\n\n"
+            "• Launch 'NeuronOS VM Manager' to set up Windows apps\n"
+            "• Open 'Settings' to customize your desktop\n"
+            "• Visit the NeuronOS documentation for guides\n\n"
+            "Enjoy your new desktop experience!"
+        )
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+
+class NeuronOSWelcomeWizard(QWizard):
+    """Main welcome wizard window."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Welcome to NeuronOS")
+        self.setWizardStyle(QWizard.ModernStyle)
+        self.setMinimumSize(600, 500)
+
+        self.addPage(WelcomePage())
+        self.addPage(HardwarePage())
+        self.addPage(SetupOptionsPage())
+        self.addPage(InstallPage())
+        self.addPage(FinishPage())
+
+        self.setButtonText(QWizard.FinishButton, "Get Started")
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("NeuronOS Welcome")
+
+    wizard = NeuronOSWelcomeWizard()
+    wizard.show()
+
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

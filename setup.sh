@@ -257,11 +257,83 @@ setup_archiso_profile() {
         sed -i 's/Arch Linux/NeuronOS/g' "$SCRIPT_DIR/neuronos-iso/grub/grub.cfg"
     fi
 
+    # Create systemd service enable symlinks (can't do this on Windows)
+    log_info "Creating systemd service symlinks..."
+    mkdir -p "$SCRIPT_DIR/neuronos-iso/airootfs/etc/systemd/system/multi-user.target.wants"
+    ln -sf /etc/systemd/system/neuronos-live-setup.service \
+        "$SCRIPT_DIR/neuronos-iso/airootfs/etc/systemd/system/multi-user.target.wants/neuronos-live-setup.service" 2>/dev/null || true
+    ln -sf /usr/lib/systemd/system/NetworkManager.service \
+        "$SCRIPT_DIR/neuronos-iso/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.service" 2>/dev/null || true
+
+    # Make the setup script executable
+    chmod +x "$SCRIPT_DIR/neuronos-iso/airootfs/usr/local/bin/neuronos-live-setup" 2>/dev/null || true
+
+    # Remove .gitkeep files
+    find "$SCRIPT_DIR/neuronos-iso/airootfs" -name ".gitkeep" -delete 2>/dev/null || true
+
     log_success "Archiso profile setup complete"
 }
 
 # ============================================================
-# STEP 8: Build NeuronOS ISO
+# STEP 8: Copy Built Components to ISO
+# ============================================================
+copy_components_to_iso() {
+    log_info "Copying NeuronOS components to ISO..."
+
+    local AIROOTFS="$SCRIPT_DIR/neuronos-iso/airootfs"
+
+    # Copy Looking Glass if built
+    if [ -f "$SCRIPT_DIR/upstream-looking-glass/client/build/looking-glass-client" ]; then
+        log_info "Copying Looking Glass client..."
+        mkdir -p "$AIROOTFS/usr/bin"
+        cp "$SCRIPT_DIR/upstream-looking-glass/client/build/looking-glass-client" "$AIROOTFS/usr/bin/"
+        chmod +x "$AIROOTFS/usr/bin/looking-glass-client"
+    else
+        log_warning "Looking Glass not built yet. Run option 3 first."
+    fi
+
+    # Copy Scream receiver if built
+    if [ -f "$SCRIPT_DIR/upstream-scream/Receivers/pipewire/build/scream" ]; then
+        log_info "Copying Scream receiver..."
+        mkdir -p "$AIROOTFS/usr/bin"
+        cp "$SCRIPT_DIR/upstream-scream/Receivers/pipewire/build/scream" "$AIROOTFS/usr/bin/scream-receiver"
+        chmod +x "$AIROOTFS/usr/bin/scream-receiver"
+    else
+        log_warning "Scream not built yet. Run option 4 first."
+    fi
+
+    # Copy neuronos-hardware Python package
+    log_info "Copying neuronos-hardware package..."
+    mkdir -p "$AIROOTFS/usr/lib/python3.12/site-packages"
+    cp -r "$SCRIPT_DIR/neuronos-hardware/neuron_hw" "$AIROOTFS/usr/lib/python3.12/site-packages/"
+    cp -r "$SCRIPT_DIR/neuronos-hardware/data" "$AIROOTFS/usr/share/neuronos/" 2>/dev/null || true
+
+    # Copy neuronos-vm-manager Python package
+    log_info "Copying neuronos-vm-manager package..."
+    cp -r "$SCRIPT_DIR/neuronos-vm-manager/neuronvm" "$AIROOTFS/usr/lib/python3.12/site-packages/"
+    mkdir -p "$AIROOTFS/usr/share/neuronos"
+    cp -r "$SCRIPT_DIR/neuronos-vm-manager/data/"* "$AIROOTFS/usr/share/neuronos/" 2>/dev/null || true
+
+    # Copy single-GPU scripts
+    log_info "Copying single-GPU scripts..."
+    mkdir -p "$AIROOTFS/usr/lib/neuronos"
+    cp "$SCRIPT_DIR/neuronos-single-gpu/scripts/"*.sh "$AIROOTFS/usr/lib/neuronos/"
+    chmod +x "$AIROOTFS/usr/lib/neuronos/"*.sh
+
+    # Copy libvirt hook
+    mkdir -p "$AIROOTFS/etc/libvirt/hooks"
+    cp "$SCRIPT_DIR/neuronos-single-gpu/hooks/qemu" "$AIROOTFS/etc/libvirt/hooks/"
+    chmod +x "$AIROOTFS/etc/libvirt/hooks/qemu"
+
+    # Make NeuronOS apps executable
+    chmod +x "$AIROOTFS/usr/bin/neuronos-welcome" 2>/dev/null || true
+    chmod +x "$AIROOTFS/usr/bin/neuronos-vmmanager" 2>/dev/null || true
+
+    log_success "Components copied to ISO"
+}
+
+# ============================================================
+# STEP 9: Build NeuronOS ISO
 # ============================================================
 build_iso() {
     log_info "Building NeuronOS ISO..."
@@ -271,6 +343,9 @@ build_iso() {
         log_warning "Archiso profile not fully set up. Running setup_archiso_profile first..."
         setup_archiso_profile
     fi
+
+    # Copy built components to the ISO
+    copy_components_to_iso
 
     # Clean previous build artifacts
     if [ -d "$BUILD_DIR/iso-work" ]; then
@@ -326,8 +401,9 @@ show_menu() {
     echo "6) Install NeuronOS Python packages"
     echo "7) Install single-GPU scripts"
     echo "8) Setup Archiso profile"
-    echo "9) Build ISO"
-    echo "10) Enable services"
+    echo "9) Copy components to ISO"
+    echo "10) Build ISO"
+    echo "11) Enable services"
     echo "0) Exit"
     echo ""
     read -p "Select option: " choice
@@ -352,8 +428,9 @@ show_menu() {
         6) install_neuronos_packages ;;
         7) install_single_gpu_scripts ;;
         8) setup_archiso_profile ;;
-        9) build_iso ;;
-        10) enable_services ;;
+        9) copy_components_to_iso ;;
+        10) build_iso ;;
+        11) enable_services ;;
         0) exit 0 ;;
         *)
             log_error "Invalid option"

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Install NeuronOS
+Comment=Install NeuronOS to your hard drive
+Exec=sudo calamares
+Icon=system-software-install
+Terminal=false
+Categories=System;
+Keywords=install;setup;calamares;

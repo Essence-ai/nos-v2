@@ -1,0 +1,13 @@
+{
+    "KPlugin": {
+        "Id": "NeuronOS",
+        "Name": "NeuronOS Default",
+        "Authors": [
+            {
+                "Name": "NeuronOS Project",
+                "Email": "dev@neuronos.org"
+            }
+        ],
+        "License": "MIT"
+    }
+}

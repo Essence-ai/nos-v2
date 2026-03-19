@@ -197,7 +197,7 @@ python-pip
 libvirt-python
 python-yaml
 python-dbus
-python-pyside6
+pyside6
 qt6-base
 qt6-wayland
 

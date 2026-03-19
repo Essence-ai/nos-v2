@@ -1,0 +1,12 @@
+[Unit]
+Description=NeuronOS Live Environment Setup
+Before=display-manager.service
+After=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/neuronos-live-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

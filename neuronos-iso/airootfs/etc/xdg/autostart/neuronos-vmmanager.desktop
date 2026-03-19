@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NeuronOS VM Manager
+Exec=/usr/bin/neuronos-vmmanager
+Icon=computer
+Terminal=false
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
