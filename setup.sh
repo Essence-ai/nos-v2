@@ -52,7 +52,7 @@ install_dependencies() {
         python \
         python-pip \
         python-yaml \
-        python-libvirt
+        libvirt-python
 
     # Archiso for building ISOs
     sudo pacman -S --noconfirm --needed archiso
@@ -90,19 +90,17 @@ install_dependencies() {
         libpulse \
         pipewire
 
-    # Scream dependencies
+    # Scream dependencies (pipewire-pulse replaces pulseaudio)
     sudo pacman -S --noconfirm --needed \
-        pulseaudio \
         pipewire-pulse
 
-    # Virtualization
+    # Virtualization (bridge-utils is deprecated, iproute2 handles bridges)
     sudo pacman -S --noconfirm --needed \
         qemu-full \
         libvirt \
         virt-manager \
         edk2-ovmf \
-        dnsmasq \
-        bridge-utils
+        dnsmasq
 
     log_success "System dependencies installed"
 }
