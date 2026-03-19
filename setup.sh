@@ -88,7 +88,10 @@ install_dependencies() {
         libxkbcommon \
         libsamplerate \
         libpulse \
-        pipewire
+        pipewire \
+        libxss \
+        libxpresent \
+        libdecor
 
     # Scream dependencies (pipewire-pulse replaces pulseaudio)
     sudo pacman -S --noconfirm --needed \
