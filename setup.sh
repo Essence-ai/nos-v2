@@ -139,7 +139,7 @@ build_looking_glass() {
 build_scream() {
     log_info "Building Scream receiver..."
 
-    cd "$SCRIPT_DIR/upstream-scream/Receivers/pipewire"
+    cd "$SCRIPT_DIR/upstream-scream/Receivers/unix"
 
     mkdir -p build
     cd build
@@ -294,10 +294,10 @@ copy_components_to_iso() {
     fi
 
     # Copy Scream receiver if built
-    if [ -f "$SCRIPT_DIR/upstream-scream/Receivers/pipewire/build/scream" ]; then
+    if [ -f "$SCRIPT_DIR/upstream-scream/Receivers/unix/build/scream" ]; then
         log_info "Copying Scream receiver..."
         mkdir -p "$AIROOTFS/usr/bin"
-        cp "$SCRIPT_DIR/upstream-scream/Receivers/pipewire/build/scream" "$AIROOTFS/usr/bin/scream-receiver"
+        cp "$SCRIPT_DIR/upstream-scream/Receivers/unix/build/scream" "$AIROOTFS/usr/bin/scream-receiver"
         chmod +x "$AIROOTFS/usr/bin/scream-receiver"
     else
         log_warning "Scream not built yet. Run option 4 first."
