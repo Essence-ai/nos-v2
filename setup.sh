@@ -186,11 +186,15 @@ install_neuronos_packages() {
 
     cd "$SCRIPT_DIR"
 
+    # Arch enables PEP 668 (externally managed env), so allow user-site installs
+    # performed by this setup script.
+    local pip_cmd="python -m pip install --user --break-system-packages"
+    
     # Install neuronos-hardware
-    pip install --user -e neuronos-hardware
+    $pip_cmd -e neuronos-hardware
 
     # Install neuronos-vm-manager
-    pip install --user -e neuronos-vm-manager
+    $pip_cmd -e neuronos-vm-manager
 
     log_success "NeuronOS Python packages installed"
 }
