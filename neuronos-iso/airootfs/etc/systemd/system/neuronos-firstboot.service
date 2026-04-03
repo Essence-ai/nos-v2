@@ -1,0 +1,16 @@
+[Unit]
+Description=NeuronOS First Boot Setup
+After=network-online.target libvirtd.service
+Wants=network-online.target
+ConditionPathExists=/etc/neuronos/download-vm-template
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/neuronos/neuronos-firstboot.sh
+ExecStartPost=/bin/rm -f /etc/neuronos/download-vm-template
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

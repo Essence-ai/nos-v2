@@ -221,12 +221,46 @@ class VMManagerWindow(QMainWindow):
             # Start VM if not running
             if self.vm_state != "running":
                 self.start_vm()
-            # TODO: Launch app in VM via QEMU guest agent
-            QMessageBox.information(
-                self, "Launch App",
-                f"Would launch: {app_data['name']}\n\n"
-                "(VM guest agent integration coming soon)"
+            # Launch app in VM via QEMU guest agent
+            self._launch_in_vm(app_data)
+
+    def _launch_in_vm(self, app_data):
+        """Launch a Windows application inside the VM via QEMU Guest Agent."""
+        app_path = app_data.get("path", "")
+        if not app_path:
+            QMessageBox.warning(self, "Error", "No Windows path configured for this app.")
+            return
+
+        cmd = json.dumps({
+            "execute": "guest-exec",
+            "arguments": {
+                "path": app_path,
+                "capture-output": False
+            }
+        })
+
+        try:
+            result = subprocess.run(
+                ["virsh", "qemu-agent-command", "win11-neuron", cmd],
+                capture_output=True, text=True, timeout=10
             )
+            if result.returncode != 0:
+                QMessageBox.warning(
+                    self, "Error",
+                    f"Failed to launch {app_data['name']}.\n\n"
+                    "Make sure the QEMU Guest Agent is installed inside Windows.\n"
+                    f"Error: {result.stderr.strip()}"
+                )
+            else:
+                # Open Looking Glass to see the app
+                self.open_looking_glass()
+        except subprocess.TimeoutExpired:
+            QMessageBox.warning(
+                self, "Error",
+                "Guest agent not responding. Is Windows fully booted?"
+            )
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to launch app: {e}")
 
     def add_app_shortcut(self):
         dialog = QDialog(self)

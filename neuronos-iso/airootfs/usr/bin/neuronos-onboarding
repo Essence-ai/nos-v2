@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""
+NeuronOS Post-Install Onboarding Wizard
+Runs once after installation to configure user preferences.
+"""
+
+import sys
+import os
+import subprocess
+from pathlib import Path
+
+try:
+    from PySide6.QtWidgets import (
+        QApplication, QWizard, QWizardPage, QVBoxLayout, QHBoxLayout,
+        QLabel, QRadioButton, QCheckBox, QButtonGroup, QFrame,
+        QSpacerItem, QSizePolicy
+    )
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QFont
+except ImportError:
+    print("PySide6 not available. Please install it.")
+    sys.exit(1)
+
+
+ONBOARDING_DONE_FLAG = Path.home() / ".config" / "neuronos" / "onboarding-complete"
+
+
+class WelcomePage(QWizardPage):
+    """Welcome page with NeuronOS introduction."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Welcome")
+
+        layout = QVBoxLayout()
+        layout.addStretch()
+
+        title_label = QLabel("NeuronOS")
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setFont(QFont("Sans", 36, QFont.Bold))
+        layout.addWidget(title_label)
+
+        layout.addSpacing(10)
+
+        subtitle_label = QLabel("Welcome to NeuronOS!")
+        subtitle_label.setAlignment(Qt.AlignCenter)
+        subtitle_label.setFont(QFont("Sans", 16))
+        layout.addWidget(subtitle_label)
+
+        layout.addSpacing(30)
+
+        desc = QLabel(
+            "Thank you for installing NeuronOS. This short wizard will help\n"
+            "personalise your system based on how you plan to use it.\n\n"
+            "It only takes a minute."
+        )
+        desc.setAlignment(Qt.AlignCenter)
+        desc.setWordWrap(True)
+        desc.setFont(QFont("Sans", 11))
+        layout.addWidget(desc)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+
+class WindowsAppsPage(QWizardPage):
+    """Ask whether the user needs Windows-only applications."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Windows Applications")
+        self.setSubTitle(
+            "Do you plan to use Windows-only software like Adobe Creative Suite, "
+            "AutoCAD, or Microsoft Office?"
+        )
+
+        layout = QVBoxLayout()
+
+        self.btn_group = QButtonGroup(self)
+        self.radio_yes = QRadioButton("Yes, I need Windows applications")
+        self.radio_no = QRadioButton("No, I only need Linux applications")
+        self.radio_no.setChecked(True)
+
+        self.btn_group.addButton(self.radio_yes)
+        self.btn_group.addButton(self.radio_no)
+
+        layout.addWidget(self.radio_yes)
+        layout.addWidget(self.radio_no)
+
+        layout.addSpacing(20)
+
+        # Explanation frame shown when "Yes" is selected
+        self.info_frame = QFrame()
+        self.info_frame.setFrameStyle(QFrame.StyledPanel)
+        info_layout = QVBoxLayout()
+        info_label = QLabel(
+            "A lightweight Windows virtual machine (~15-20 GB) will be prepared "
+            "in the background after you finish this wizard. NeuronOS uses GPU "
+            "passthrough so Windows applications feel native while running inside "
+            "a VM.\n\n"
+            "You can continue using your computer normally while the download "
+            "completes."
+        )
+        info_label.setWordWrap(True)
+        info_layout.addWidget(info_label)
+        self.info_frame.setLayout(info_layout)
+        self.info_frame.hide()
+        layout.addWidget(self.info_frame)
+
+        self.btn_group.buttonClicked.connect(self._on_selection_changed)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def _on_selection_changed(self):
+        self.info_frame.setVisible(self.radio_yes.isChecked())
+
+    def wants_windows_vm(self):
+        return self.radio_yes.isChecked()
+
+
+class GamingPage(QWizardPage):
+    """Ask whether the user plays PC games."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Gaming")
+        self.setSubTitle("Do you play PC games?")
+
+        layout = QVBoxLayout()
+
+        desc = QLabel(
+            "Select any gaming tools you would like to install. "
+            "They will be set up in the background after the wizard finishes."
+        )
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        layout.addSpacing(15)
+
+        self.chk_steam = QCheckBox("Steam + Proton  (Valve's game store and Windows compatibility layer)")
+        self.chk_lutris = QCheckBox("Lutris  (open-source game manager for many platforms)")
+        self.chk_heroic = QCheckBox("Heroic Games Launcher  (open-source Epic / GOG launcher)")
+
+        layout.addWidget(self.chk_steam)
+        layout.addSpacing(6)
+        layout.addWidget(self.chk_lutris)
+        layout.addSpacing(6)
+        layout.addWidget(self.chk_heroic)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def selected_packages(self):
+        """Return list of pacman package names to install."""
+        pkgs = []
+        if self.chk_steam.isChecked():
+            pkgs.extend(["steam", "proton-ge-custom"])
+        if self.chk_lutris.isChecked():
+            pkgs.append("lutris")
+        if self.chk_heroic.isChecked():
+            pkgs.append("heroic-games-launcher")
+        return pkgs
+
+
+class SummaryPage(QWizardPage):
+    """Summary of what will be configured."""
+
+    def __init__(self, windows_page, gaming_page):
+        super().__init__()
+        self.setTitle("Summary")
+        self.setSubTitle("Here is what will be set up when you click 'Get Started':")
+        self.windows_page = windows_page
+        self.gaming_page = gaming_page
+
+        layout = QVBoxLayout()
+
+        self.summary_label = QLabel()
+        self.summary_label.setWordWrap(True)
+        self.summary_label.setFont(QFont("Sans", 11))
+        layout.addWidget(self.summary_label)
+
+        layout.addStretch()
+
+        note = QLabel(
+            "You can change these settings later from the NeuronOS Settings application."
+        )
+        note.setStyleSheet("color: gray;")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+        self.setLayout(layout)
+
+    def initializePage(self):
+        """Rebuild summary text every time the page is shown."""
+        lines = []
+
+        if self.windows_page.wants_windows_vm():
+            lines.append("  \u2022  Download and prepare a Windows VM (~15-20 GB)")
+        else:
+            lines.append("  \u2022  No Windows VM (Linux-only workflow)")
+
+        pkgs = self.gaming_page.selected_packages()
+        if pkgs:
+            lines.append("  \u2022  Install gaming tools: " + ", ".join(pkgs))
+        else:
+            lines.append("  \u2022  No gaming tools selected")
+
+        if not self.windows_page.wants_windows_vm() and not pkgs:
+            lines.append("\nNo additional changes will be made.")
+
+        self.summary_label.setText("\n".join(lines))
+
+
+class NeuronOSOnboardingWizard(QWizard):
+    """Main onboarding wizard window."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("NeuronOS Onboarding")
+        self.setWizardStyle(QWizard.ModernStyle)
+        self.setMinimumSize(640, 480)
+
+        self.welcome_page = WelcomePage()
+        self.windows_page = WindowsAppsPage()
+        self.gaming_page = GamingPage()
+        self.summary_page = SummaryPage(self.windows_page, self.gaming_page)
+
+        self.addPage(self.welcome_page)
+        self.addPage(self.windows_page)
+        self.addPage(self.gaming_page)
+        self.addPage(self.summary_page)
+
+        self.setButtonText(QWizard.FinishButton, "Get Started")
+
+        self.finished.connect(self._on_wizard_finished)
+
+    # ------------------------------------------------------------------
+    # Actions executed on finish
+    # ------------------------------------------------------------------
+    def _on_wizard_finished(self, result):
+        if result != QWizard.Accepted:
+            return
+
+        # --- Windows VM ---
+        if self.windows_page.wants_windows_vm():
+            self._trigger_windows_vm()
+
+        # --- Gaming packages ---
+        pkgs = self.gaming_page.selected_packages()
+        if pkgs:
+            self._install_gaming_packages(pkgs)
+
+        # --- Mark onboarding complete ---
+        self._mark_complete()
+
+    @staticmethod
+    def _trigger_windows_vm():
+        """Signal the system to download the Windows VM template."""
+        flag_dir = Path("/etc/neuronos")
+        flag_file = flag_dir / "download-vm-template"
+        try:
+            subprocess.run(
+                ["pkexec", "bash", "-c",
+                 f"mkdir -p {flag_dir} && touch {flag_file} && "
+                 "systemctl start neuronos-firstboot.service"],
+                check=False
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def _install_gaming_packages(pkgs):
+        """Install selected gaming packages via pacman in the background."""
+        pkg_str = " ".join(pkgs)
+        try:
+            subprocess.Popen(
+                ["pkexec", "bash", "-c",
+                 f"pacman -S --noconfirm --needed {pkg_str}"]
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def _mark_complete():
+        """Create the flag file so the wizard is not shown again."""
+        ONBOARDING_DONE_FLAG.parent.mkdir(parents=True, exist_ok=True)
+        ONBOARDING_DONE_FLAG.touch()
+
+
+def main():
+    # If onboarding has already been completed, exit silently.
+    if ONBOARDING_DONE_FLAG.exists():
+        sys.exit(0)
+
+    app = QApplication(sys.argv)
+    app.setApplicationName("NeuronOS Onboarding")
+
+    wizard = NeuronOSOnboardingWizard()
+    wizard.show()
+
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

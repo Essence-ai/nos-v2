@@ -1,0 +1,116 @@
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>win11-neuron</name>
+  <metadata>
+    <neuronos:config xmlns:neuronos="http://neuronos.org/xmlns/libvirt/1.0">
+      <neuronos:version>0.1.0</neuronos:version>
+    </neuronos:config>
+  </metadata>
+  <memory unit='GiB'>8</memory>
+  <currentMemory unit='GiB'>8</currentMemory>
+  <vcpu placement='static'>6</vcpu>
+  <cpu mode='host-passthrough' check='none' migratable='on'>
+    <topology sockets='1' dies='1' cores='6' threads='1'/>
+  </cpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-9.0'>hvm</type>
+    <loader readonly='yes' type='pflash'>/usr/share/edk2/x64/OVMF_CODE.4m.fd</loader>
+    <nvram template='/usr/share/edk2/x64/OVMF_VARS.4m.fd'/>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <hyperv mode='custom'>
+      <relaxed state='on'/>
+      <vapic state='on'/>
+      <spinlocks state='on' retries='8191'/>
+      <vpindex state='on'/>
+      <runtime state='on'/>
+      <synic state='on'/>
+      <stimer state='on'/>
+      <vendor_id state='on' value='AuthenticAMD'/>
+    </hyperv>
+    <kvm>
+      <hidden state='on'/>
+    </kvm>
+    <vmport state='off'/>
+  </features>
+  <clock offset='localtime'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+    <timer name='hypervclock' present='yes'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled='yes'/>
+    <suspend-to-disk enabled='yes'/>
+  </pm>
+  <devices>
+    <!-- VirtIO disk for Windows -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' discard='unmap' cache='writeback'/>
+      <source file='/var/lib/libvirt/images/win11-neuron.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <!-- Shared folder between host and VM -->
+    <filesystem type='mount' accessmode='passthrough'>
+      <driver type='virtiofs'/>
+      <source dir='/home'/>
+      <target dir='host-home'/>
+    </filesystem>
+    <!-- GPU passthrough (placeholder - configured dynamically by neuronos-vm-setup) -->
+    <!-- The actual PCI addresses are filled in by neuronos-vm-setup based on hardware detection -->
+    <!-- <hostdev mode='subsystem' type='pci' managed='yes'>
+      <source>
+        <address domain='0x0000' bus='0x01' slot='0x00' function='0x0'/>
+      </source>
+    </hostdev> -->
+    <!-- Looking Glass shared memory -->
+    <shmem name='looking-glass'>
+      <model type='ivshmem-plain'/>
+      <size unit='M'>128</size>
+    </shmem>
+    <!-- Scream audio shared memory -->
+    <shmem name='scream-ivshmem'>
+      <model type='ivshmem-plain'/>
+      <size unit='M'>2</size>
+    </shmem>
+    <!-- VirtIO network -->
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <!-- Spice display for initial setup (before Looking Glass) -->
+    <graphics type='spice' autoport='yes'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <video>
+      <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+    </video>
+    <!-- Input devices -->
+    <input type='mouse' bus='virtio'/>
+    <input type='keyboard' bus='virtio'/>
+    <!-- QEMU Guest Agent for in-VM app launching -->
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+    <!-- Clipboard sharing via Spice agent -->
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+    </channel>
+    <!-- Sound (fallback, Scream via IVSHMEM is preferred) -->
+    <sound model='ich9'>
+      <audio id='1'/>
+    </sound>
+    <audio id='1' type='spice'/>
+    <!-- USB controller for passthrough -->
+    <controller type='usb' model='qemu-xhci' ports='8'/>
+    <!-- Balloon for dynamic memory -->
+    <memballoon model='virtio'>
+      <stats period='5'/>
+    </memballoon>
+  </devices>
+</domain>
