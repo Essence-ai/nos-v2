@@ -6,7 +6,9 @@ NeuronOS, whether they run natively, via Wine, or in the VM.
 """
 
 import argparse
+import json
 import logging
+import subprocess
 import sys
 import time
 
@@ -153,6 +155,101 @@ def launch_proton(app_id: str, app_entry: dict = None):
     subprocess.Popen(["steam", f"steam://rungameid/{app_id}"])
 
 
+VM_DOMAIN = "win11-neuron"
+
+
+def _wait_for_guest_agent(timeout: int = 60):
+    """
+    Poll the QEMU Guest Agent until it responds to a ping.
+
+    Args:
+        timeout: Maximum seconds to wait for the agent.
+
+    Raises:
+        RuntimeError: If the agent does not respond within the timeout.
+    """
+    ping_cmd = json.dumps({"execute": "guest-ping"})
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        result = subprocess.run(
+            ["virsh", "qemu-agent-command", VM_DOMAIN, ping_cmd],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            logger.debug("Guest agent is available")
+            return
+        logger.debug(
+            "Guest agent not ready yet (rc=%d), retrying...", result.returncode
+        )
+        time.sleep(2)
+
+    raise RuntimeError(
+        f"QEMU Guest Agent did not become available within {timeout}s"
+    )
+
+
+def _launch_app_in_vm(app_id: str, app_entry: dict = None):
+    """
+    Launch a Windows application inside the VM via the QEMU Guest Agent.
+
+    The function determines the executable path from *app_entry* (using the
+    first entry in ``exe_patterns``) and falls back to *app_id* treated as a
+    literal Windows path.  The executable is started with ``guest-exec`` so
+    that it runs asynchronously inside the guest.
+
+    Args:
+        app_id: Application identifier or direct executable path.
+        app_entry: Optional application catalog entry with metadata such as
+            ``exe_patterns``.
+    """
+    # Resolve the Windows executable path
+    exe_path = None
+    if app_entry:
+        patterns = app_entry.get("exe_patterns", [])
+        if patterns:
+            # Use the first pattern as the canonical path
+            exe_path = patterns[0]
+
+    if exe_path is None:
+        exe_path = app_id
+
+    logger.info("Launching '%s' inside VM via guest agent", exe_path)
+
+    guest_exec_cmd = json.dumps({
+        "execute": "guest-exec",
+        "arguments": {
+            "path": exe_path,
+            "capture-output": True,
+        },
+    })
+
+    result = subprocess.run(
+        ["virsh", "qemu-agent-command", VM_DOMAIN, guest_exec_cmd],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        logger.error(
+            "guest-exec failed (rc=%d): %s", result.returncode, result.stderr
+        )
+        raise RuntimeError(
+            f"Failed to launch application in VM: {result.stderr.strip()}"
+        )
+
+    # Parse the PID returned by the guest agent
+    try:
+        response = json.loads(result.stdout)
+        pid = response.get("return", {}).get("pid")
+        logger.info("Application started in VM with guest PID %s", pid)
+    except (json.JSONDecodeError, KeyError):
+        logger.warning(
+            "Could not parse guest-exec response: %s", result.stdout
+        )
+
+
 def launch_vm(app_id: str, app_entry: dict, config):
     """Launch an application in the Windows VM."""
     manager = VMLifecycleManager()
@@ -170,9 +267,9 @@ def launch_vm(app_id: str, app_entry: dict, config):
             if not manager.start_vm():
                 raise RuntimeError("Failed to start VM")
 
-            # Wait for VM to be fully booted
+            # Wait for VM to be fully booted by polling the guest agent
             logger.info("Waiting for VM to be ready...")
-            time.sleep(10)  # TODO: Proper readiness check
+            _wait_for_guest_agent(timeout=60)
 
         # Launch Looking Glass
         logger.info("Launching Looking Glass...")
@@ -192,9 +289,8 @@ def launch_vm(app_id: str, app_entry: dict, config):
 
         lg_wrapper.add_exit_callback(on_lg_exit)
 
-        # TODO: Launch the actual application inside the VM
-        # This would require communication with the VM via QEMU Guest Agent
-        # or a custom agent running inside Windows
+        # Launch the application inside the VM via QEMU Guest Agent
+        _launch_app_in_vm(app_id, app_entry)
 
         logger.info(f"Application {app_name} launched in VM")
 

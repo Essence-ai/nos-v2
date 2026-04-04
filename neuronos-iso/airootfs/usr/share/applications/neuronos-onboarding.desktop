@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NeuronOS Onboarding
+Comment=Post-install onboarding wizard for NeuronOS
+Exec=/usr/bin/neuronos-onboarding
+Icon=neuronos
+Terminal=false
+Categories=System;Settings;
+StartupNotify=true

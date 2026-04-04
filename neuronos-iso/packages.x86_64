@@ -243,5 +243,7 @@ ttf-dejavu
 htop
 btop
 fastfetch
+wmctrl
+xdotool
 xclip
 wl-clipboard

@@ -104,3 +104,8 @@ upstream-scream/Receivers/*/build/
 !upstream-calamares/
 !upstream-looking-glass/
 !upstream-scream/
+
+# Don't ignore NeuronOS files in airootfs that match general patterns
+!neuronos-iso/airootfs/usr/lib/
+!neuronos-iso/airootfs/usr/lib/neuronos/
+!neuronos-iso/airootfs/usr/lib/calamares/
