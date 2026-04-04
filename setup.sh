@@ -599,11 +599,13 @@ build_iso() {
 enable_services() {
     log_info "Enabling system services..."
 
-    sudo systemctl enable libvirtd
-    sudo systemctl enable NetworkManager
+    # These may not exist on a minimal build machine — that's OK,
+    # they get enabled inside the ISO/installed system separately.
+    sudo systemctl enable libvirtd 2>/dev/null || log_warning "libvirtd not found on build host (OK if only building ISO)"
+    sudo systemctl enable NetworkManager 2>/dev/null || log_warning "NetworkManager not found on build host (OK if only building ISO)"
 
     # Add current user to required groups
-    sudo usermod -aG libvirt,kvm "$USER"
+    sudo usermod -aG libvirt,kvm "$USER" 2>/dev/null || true
 
     log_success "Services enabled"
     log_warning "You may need to log out and back in for group changes to take effect"
