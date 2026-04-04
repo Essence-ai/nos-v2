@@ -1,73 +1,138 @@
-Archinstall
+NeuronOS Build Commands (Updated)
+==================================
 
-disk config: 
-partitioning: use a best-effort default partitioning layout 
-filesystem xfs
+=== ARCHINSTALL (Fresh Arch VM) ===
 
-bootloader grub
+archinstall
 
+disk config:
+    partitioning: use a best-effort default partitioning layout
+    filesystem: xfs
 
-authentication: 
-add a user:
-hostname: archlinux
-password: password 
-Should 'archlinux' be a superuser(sudo)?
-yes
+bootloader: grub
 
-network config: 
-copt iso network config to installation 
+authentication:
+    add a user:
+    hostname: archlinux
+    password: password
+    Should 'archlinux' be a superuser (sudo)? yes
 
-install 
+network config:
+    copy iso network config to installation
+
+install
 
 --- When install is done ---
+sudo reboot
 
-sudo reboot 
+--- Delete ISO from VM settings ---
 
---- Delete ISO from VM ---
 
+=== FIRST LOGIN ===
 
 archlinux
-password 
+password
 
-sudo pacman -S --needed archiso dos2unix qemu-full git base-devel python libvirt-python
+
+=== CLONE AND SETUP ===
+
+# Install prerequisites
+sudo pacman -Syu --noconfirm
+sudo pacman -S --needed git base-devel dos2unix
+
+# Clone the repo
 git clone https://github.com/Essence-ai/nos-v2
-
 cd ~/nos-v2
 
+# Fix line endings (important if edited on Windows)
+dos2unix setup.sh
+
+# Make executable
 chmod +x setup.sh
 
+
+=== BUILD OPTIONS ===
+
+Option A: Full Setup with Menu
+------------------------------
+./setup.sh
+
+Menu Options:
+  1) Full setup (everything) - installs deps, builds all components
+  2) Install dependencies only
+  3) Build Looking Glass
+  4) Build Scream
+  5) Build Calamares
+  6) Install NeuronOS Python packages
+  7) Install single-GPU scripts
+  8) Setup Archiso profile
+  9) Copy components to ISO
+  10) Build ISO
+  11) Enable services
+  0) Exit
+
+Recommended order:
+  - Run option 1 first (full setup)
+  - Then run option 9 (copy components to ISO)
+  - Then run: sudo ./setup.sh --iso
+
+
+Option B: Quick Commands
+------------------------
+./setup.sh --full          # Full setup (no menu, runs everything except ISO build)
+sudo ./setup.sh --iso      # Build ISO directly
+
+
+=== COMPLETE WORKFLOW ===
+
+# Step 1: Full setup (as regular user)
 ./setup.sh --full
+
+# Step 2: Copy built components to ISO
+./setup.sh
+# Select option 9
+
+# Step 3: Build ISO (requires sudo)
 sudo ./setup.sh --iso
 
 
-Shared Folder:
+=== SHARED FOLDER (VirtualBox) ===
 
-sudo mount -t vboxsf shared /mnt 
-cp ~/nos-v2/out/*.iso /mnt 
-
-
-
----end---
-
-Start UP: 
-
-sudo systemctl start gdm
+sudo mount -t vboxsf shared /mnt
+cp ~/nos-v2/out/*.iso /mnt
 
 
-optional:
-    qemu-system-x86_64 -enable-kvm -m 4G -nographic -serial mon:stdio -cdrom out/neuronos-*.iso
+=== TROUBLESHOOTING ===
 
-File System:
-    lsblk
-    lsblk -f 
+# If build gets stuck or needs restart:
+cd ~/nos-v2
+sudo rm -rf build/
+./setup.sh --full
 
-    df -h
+# If ISO build fails:
+sudo rm -rf ~/nos-v2/build/iso-work
+sudo ./setup.sh --iso
 
-    sudo fdisk -l 
-
-
-Delete Folder:
-    sudo rm -r NeuronOS
-    sudo rm -rf NeuronOS (FORCE DELETE!)
+# View ISO output:
+ls -la out/
 
 
+=== USEFUL COMMANDS ===
+
+# File System:
+lsblk
+lsblk -f
+df -h
+sudo fdisk -l
+
+# Delete and reclone:
+cd ~
+sudo rm -rf nos-v2
+git clone https://github.com/Essence-ai/nos-v2
+
+
+=== NOTES ===
+
+- "soft lockup" warnings during SquashFS creation are NORMAL in VMs
+- SquashFS compression is CPU-intensive, let it complete
+- ISO output will be in: ~/nos-v2/out/neuronos-*.iso

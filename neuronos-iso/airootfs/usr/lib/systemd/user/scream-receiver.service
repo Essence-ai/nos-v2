@@ -1,0 +1,12 @@
+[Unit]
+Description=Scream Audio Receiver for Windows VM
+After=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/scream-receiver -o pipewire
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
