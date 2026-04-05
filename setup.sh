@@ -257,9 +257,14 @@ install_single_gpu_scripts() {
 setup_archiso_profile() {
     log_info "Setting up Archiso profile for NeuronOS..."
 
-    # Backup our custom files
+    # Backup ALL of our custom NeuronOS files before overlaying releng base
+    log_info "Backing up NeuronOS customizations..."
+    local BACKUP_DIR="/tmp/neuronos-airootfs-bak"
+    rm -rf "$BACKUP_DIR"
+    cp -a "$SCRIPT_DIR/neuronos-iso/airootfs" "$BACKUP_DIR"
     cp "$SCRIPT_DIR/neuronos-iso/packages.x86_64" /tmp/neuronos-packages.x86_64.bak
     cp "$SCRIPT_DIR/neuronos-iso/profiledef.sh" /tmp/neuronos-profiledef.sh.bak
+    cp "$SCRIPT_DIR/neuronos-iso/pacman.conf" /tmp/neuronos-pacman.conf.bak 2>/dev/null || true
 
     # Copy the releng profile directories we need (syslinux, efiboot, grub, airootfs)
     log_info "Copying boot directories from upstream archiso..."
@@ -267,18 +272,26 @@ setup_archiso_profile() {
     cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/efiboot" "$SCRIPT_DIR/neuronos-iso/"
     cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/grub" "$SCRIPT_DIR/neuronos-iso/"
 
-    # Copy airootfs base and merge with our customizations
-    log_info "Setting up airootfs..."
+    # Copy airootfs base from releng (provides root's shell config, etc.)
+    log_info "Setting up airootfs base from releng..."
     cp -r "$SCRIPT_DIR/upstream-archiso/configs/releng/airootfs/"* "$SCRIPT_DIR/neuronos-iso/airootfs/" 2>/dev/null || true
+
+    # Restore ALL NeuronOS customizations on top (our files take priority)
+    log_info "Restoring NeuronOS customizations over releng base..."
+    cp -a "$BACKUP_DIR/"* "$SCRIPT_DIR/neuronos-iso/airootfs/"
 
     # Copy bootstrap_packages if it exists
     if [ -f "$SCRIPT_DIR/upstream-archiso/configs/releng/bootstrap_packages" ]; then
         cp "$SCRIPT_DIR/upstream-archiso/configs/releng/bootstrap_packages" "$SCRIPT_DIR/neuronos-iso/"
     fi
 
-    # Restore our custom files
+    # Restore our custom top-level profile files
     cp /tmp/neuronos-packages.x86_64.bak "$SCRIPT_DIR/neuronos-iso/packages.x86_64"
     cp /tmp/neuronos-profiledef.sh.bak "$SCRIPT_DIR/neuronos-iso/profiledef.sh"
+    cp /tmp/neuronos-pacman.conf.bak "$SCRIPT_DIR/neuronos-iso/pacman.conf" 2>/dev/null || true
+
+    # Clean up backup
+    rm -rf "$BACKUP_DIR"
 
     # Update syslinux config to say NeuronOS instead of Arch Linux
     if [ -f "$SCRIPT_DIR/neuronos-iso/syslinux/archiso_sys-linux.cfg" ]; then
