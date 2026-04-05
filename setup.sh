@@ -433,6 +433,38 @@ LAUNCHEOF
         cp "$SCRIPT_DIR/neuronos-hardware/systemd/neuron-hw-check.service" "$AIROOTFS/etc/systemd/system/"
     fi
 
+    # --- Calamares Binary & Libraries ---
+
+    # Copy Calamares binary and libraries built from upstream-calamares
+    # (calamares is not in packages.x86_64 because we build it from source)
+    if [ -f /usr/bin/calamares ]; then
+        log_info "Copying Calamares binary and libraries..."
+        mkdir -p "$AIROOTFS/usr/bin"
+        cp /usr/bin/calamares "$AIROOTFS/usr/bin/"
+        chmod +x "$AIROOTFS/usr/bin/calamares"
+
+        # Copy Calamares libraries
+        if [ -d /usr/lib/calamares ]; then
+            mkdir -p "$AIROOTFS/usr/lib/calamares"
+            cp -r /usr/lib/calamares/* "$AIROOTFS/usr/lib/calamares/"
+        fi
+
+        # Copy Calamares shared data (QML, branding defaults, etc.)
+        if [ -d /usr/share/calamares ]; then
+            mkdir -p "$AIROOTFS/usr/share/calamares"
+            cp -r /usr/share/calamares/* "$AIROOTFS/usr/share/calamares/"
+        fi
+
+        # Copy Calamares shared libraries (libcalamares*.so)
+        for lib in /usr/lib/libcalamares*; do
+            if [ -f "$lib" ]; then
+                cp "$lib" "$AIROOTFS/usr/lib/"
+            fi
+        done
+    else
+        log_warning "Calamares binary not found at /usr/bin/calamares. Run option 5 (build_calamares) first."
+    fi
+
     # --- Calamares Integration ---
 
     log_info "Copying Calamares modules for installed system..."

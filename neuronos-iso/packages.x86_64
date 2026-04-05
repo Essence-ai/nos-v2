@@ -245,5 +245,6 @@ btop
 fastfetch
 wmctrl
 xdotool
+pciutils
 xclip
 wl-clipboard

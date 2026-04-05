@@ -42,4 +42,5 @@ file_permissions=(
   ["/usr/lib/neuronos/neuronos-firstboot.sh"]="0:0:755"
   ["/usr/lib/neuronos/vm-setup.py"]="0:0:755"
   ["/usr/lib/neuronos/install-to-target.sh"]="0:0:755"
+  ["/usr/bin/calamares"]="0:0:755"
 )
