@@ -1,14 +1,16 @@
 #!/bin/bash
 # NeuronOS Live Environment Setup Script
+# Runs once during live ISO boot to prepare the environment.
 
-set -e
-
-# Enable SDDM display manager
-systemctl enable sddm.service
+# Enable SDDM display manager (in case preset didn't enable it)
+systemctl enable sddm.service 2>/dev/null || true
 systemctl set-default graphical.target
 
 # Enable NetworkManager
-systemctl enable NetworkManager.service
+systemctl enable NetworkManager.service 2>/dev/null || true
+
+# Enable libvirtd
+systemctl enable libvirtd.service 2>/dev/null || true
 
 # Create liveuser home directory if it doesn't exist
 if [ ! -d /home/liveuser ]; then
@@ -19,9 +21,18 @@ fi
 # Make sure the desktop file is executable
 chmod +x /home/liveuser/Desktop/install-neuronos.desktop 2>/dev/null || true
 
-# Start SDDM if not already running
-if ! systemctl is-active --quiet sddm; then
-    systemctl start sddm.service
-fi
+# Create shared memory files for Looking Glass and Scream
+touch /dev/shm/looking-glass 2>/dev/null || true
+chmod 0660 /dev/shm/looking-glass 2>/dev/null || true
+chown root:kvm /dev/shm/looking-glass 2>/dev/null || true
+
+touch /dev/shm/scream-ivshmem 2>/dev/null || true
+chmod 0660 /dev/shm/scream-ivshmem 2>/dev/null || true
+chown root:kvm /dev/shm/scream-ivshmem 2>/dev/null || true
+
+# NOTE: Do NOT call "systemctl start sddm" here!
+# This service runs Before=display-manager.service, so starting SDDM
+# here would deadlock. SDDM starts automatically after this service
+# completes via the graphical.target dependency chain.
 
 echo "NeuronOS live environment setup complete"
